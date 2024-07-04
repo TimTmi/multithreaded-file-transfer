@@ -185,6 +185,9 @@ class UploadFrame(ctk.CTkFrame):
 
         self.file_label = ctk.CTkLabel(master=choose_file_frame, text="No file selected", width=20)
         self.file_label.grid(pady=16, row=0, column=1)
+
+        upload_button = ctk.CTkButton(master=frame2, text="Upload", font=('Arial',16))
+        upload_button.grid(row=1, padx=16, sticky="w")
     
     def open_file_dialog(self):
         file_path = filedialog.askopenfilename(
@@ -204,6 +207,32 @@ class UploadFrame(ctk.CTkFrame):
 class UploadedFilesFrame(ctk.CTkFrame):
     def __init__(self, parent: ctk.CTkFrame, controller: App):
         super().__init__(master=parent)
+
+        return_button = ctk.CTkButton(
+            master=self,
+            text="",
+            width=1,
+            image=ctk.CTkImage(
+                light_image=Image.open("images\\return.png"),
+                size=(32,32)
+            ),
+            command=lambda: controller.show_frame("MainFrame")
+        )
+        return_button.pack(
+            padx=16, pady=16,
+            anchor="w"
+        )
+
+        scrollable_frame = ctk.CTkScrollableFrame(master=self)
+        scrollable_frame.pack(
+            padx=16, pady=16,
+            fill="both", expand=True
+        )
+
+        label = ctk.CTkLabel(master=scrollable_frame, text="no files")
+        label.pack(
+            fill="both", expand=True
+        )
 
 
 
