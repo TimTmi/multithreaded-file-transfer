@@ -1,1 +1,1 @@
-# multithread-file-transfer
+# multithreaded-file-transfer
