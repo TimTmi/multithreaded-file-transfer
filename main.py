@@ -2,6 +2,8 @@ import customtkinter as ctk
 from tkinter import filedialog
 from PIL import Image
 
+import filetransferclient
+
 
 
 class App(ctk.CTk):
@@ -166,28 +168,33 @@ class UploadFrame(ctk.CTkFrame):
             fg_color="transparent"
         )
         frame2.grid(sticky="ew")
-        frame2.grid_rowconfigure(0, weight=1)
-        frame2.grid_rowconfigure(1, weight=1)
-        frame2.grid_columnconfigure(0, weight=1)
+        # frame2.grid_rowconfigure(0, weight=1)
+        # frame2.grid_rowconfigure(1, weight=1)
+        # frame2.grid_columnconfigure(0, weight=1)
 
-        choose_file_frame = ctk.CTkFrame(master=frame2)
-        choose_file_frame.grid(sticky="ew")
-        choose_file_frame.grid_columnconfigure(0, weight=0)
+        # choose_file_frame = ctk.CTkFrame(master=frame2)
+        # choose_file_frame.grid(sticky="ew")
+        # choose_file_frame.grid_columnconfigure(0, weight=0)
         # choose_file_frame.grid_columnconfigure(1, weight=1)
 
+        self.file_label = ctk.CTkLabel(
+            master=frame2,
+            text="No file selected",
+            font=('Arial',16),
+            width=20
+        )
+        self.file_label.pack()
+
         choose_file_button = ctk.CTkButton(
-            master=choose_file_frame,
+            master=frame2,
             text="Choose a File",
             font=('Arial',16),
             command=self.open_file_dialog
         )
-        choose_file_button.grid(padx=16)
-
-        self.file_label = ctk.CTkLabel(master=choose_file_frame, text="No file selected", width=20)
-        self.file_label.grid(pady=16, row=0, column=1)
+        choose_file_button.pack(pady=16)
 
         upload_button = ctk.CTkButton(master=frame2, text="Upload", font=('Arial',16))
-        upload_button.grid(row=1, padx=16, sticky="w")
+        upload_button.pack()
     
     def open_file_dialog(self):
         file_path = filedialog.askopenfilename(
@@ -195,7 +202,7 @@ class UploadFrame(ctk.CTkFrame):
             filetypes=(("All files", "*.*"),)
         )
         if file_path:
-            self.file_label.configure(text=f"Selected file: {self.truncate_text(text=file_path, max_length=32)}")
+            self.file_label.configure(text=f"Selected file: {self.truncate_text(text=file_path, max_length=56)}")
     
     def truncate_text(self, text, max_length):
             if len(text) > max_length:
@@ -240,11 +247,60 @@ class HelpFrame(ctk.CTkFrame):
     def __init__(self, parent: ctk.CTkFrame, controller: App):
         super().__init__(master=parent)
 
+        return_button = ctk.CTkButton(
+            master=self,
+            text="",
+            width=1,
+            image=ctk.CTkImage(
+                light_image=Image.open("images\\return.png"),
+                size=(32,32)
+            ),
+            command=lambda: controller.show_frame("MainFrame")
+        )
+        return_button.pack(
+            padx=16, pady=16,
+            anchor="w"
+        )
+
 
 
 class CreditsFrame(ctk.CTkFrame):
     def __init__(self, parent: ctk.CTkFrame, controller: App):
         super().__init__(master=parent)
+
+        return_button = ctk.CTkButton(
+            master=self,
+            text="",
+            width=1,
+            image=ctk.CTkImage(
+                light_image=Image.open("images\\return.png"),
+                size=(32,32)
+            ),
+            command=lambda: controller.show_frame("MainFrame")
+        )
+        return_button.place(x=16, y=16)
+
+        title = ctk.CTkLabel(
+            master=self,
+            text="Credits",
+            font=('Arial',32)
+        )
+        title.pack(pady=16)
+
+        frame = ctk.CTkFrame(master=self)
+        frame.pack(
+            padx=16, pady=16,
+            fill="both", expand=True
+        )
+
+        credits = ctk.CTkLabel(
+            master=frame,
+            text = "quang\nhào\nkhoa",
+            font=('Arial',16)
+        )
+        credits.pack(pady=16)
+
+
 
 
 
