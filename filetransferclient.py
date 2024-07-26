@@ -167,6 +167,13 @@ def delete_file(file_name: str):
     except Exception as e:
         print(f"[FILE DELETION ERROR] {e}")
 
+
+
+if not os.path.exists(CLIENT_DATA_PATH):
+    os.makedirs(CLIENT_DATA_PATH)
+
+
+
 if (__name__ == '__main__'):
     delete_file("gitgud.txt")
     delete_file("dsdsd.pdf")
