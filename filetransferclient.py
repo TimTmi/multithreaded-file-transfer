@@ -9,34 +9,36 @@ import commands
 
 
 class FileTransferClient:
-    HOST = socket.gethostbyname(socket.gethostname())
-    port = 1306
-    address = (HOST, port)
-    client_data_path = "client_data"
+    address: tuple[str, int]
+    client_data_path: str
     chunk_uploaded = signal("chunk_uploaded")
     chunk_downloaded = signal("chunk_downloaded")
 
 
 
-    def __init__(self, port: int, client_data_path: str) -> None:
-        self.port = port
+    def __init__(self, port: int, client_data_path: str, chunk_uploaded_handler = lambda: None, chunk_downloaded_handler = lambda: None) -> None:
         self.client_data_path = client_data_path
+        self.address = (socket.gethostbyname(socket.gethostname()), port)
         if not os.path.exists(client_data_path):
             os.makedirs(client_data_path)
+        self.chunk_uploaded.connect(chunk_uploaded_handler)
+        self.chunk_downloaded.connect(chunk_downloaded_handler)
 
-    def send_command(sock: socket.socket, command: int, data_length: int = 0):
+
+
+    def send_command(self, sock: socket.socket, command: int, data_length: int = 0):
         sock.sendall(struct.pack('!BI', command, data_length))
 
-    def send_int(sock: socket.socket, value: int):
+    def send_int(self, sock: socket.socket, value: int):
         sock.sendall(struct.pack('!I', value))
 
-    def recv_bool(sock: socket.socket) -> bool:
+    def recv_bool(self, sock: socket.socket) -> bool:
         return struct.unpack('!?', sock.recv(1))[0]
 
-    def recv_int(sock: socket.socket) -> int:
+    def recv_int(self, sock: socket.socket) -> int:
         return struct.unpack('!I', sock.recv(4))[0]
 
-    def recv_all(sock: socket.socket, length: int) -> bytes:
+    def recv_all(self, sock: socket.socket, length: int) -> bytes:
         data = bytearray()
         while len(data) < length:
             packet = sock.recv(length - len(data))
