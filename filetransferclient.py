@@ -2,6 +2,7 @@ import socket
 import threading
 import struct
 import os
+from blinker import signal
 
 import commands
 
@@ -12,6 +13,8 @@ class FileTransferClient:
     port = 1306
     address = (HOST, port)
     client_data_path = "client_data"
+    chunk_uploaded = signal("chunk_uploaded")
+    chunk_downloaded = signal("chunk_downloaded")
 
 
 
@@ -82,6 +85,7 @@ class FileTransferClient:
                     data: bytes = file.read(end_byte - start_byte + 1)
                     sock.sendall(data)
                 
+                self.chunk_uploaded.send(self, chunk = chunk_number)
                 print(f"Chunk {chunk_number} uploaded from {start_byte} to {end_byte}")
         
         except Exception as e:
@@ -133,6 +137,8 @@ class FileTransferClient:
                     file.seek(start_byte)
                     data = self.recv_all(sock, end_byte - start_byte + 1)
                     file.write(data)
+                
+                self.chunk_downloaded.send(self, chunk = chunk_number)
                 print(f"Chunk {chunk_number} downloaded from {start_byte} to {end_byte}")
         
         except Exception as e:
