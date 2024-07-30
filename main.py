@@ -2,7 +2,7 @@ import customtkinter as ctk
 from tkinter import filedialog
 from PIL import Image
 
-import filetransferclient
+# import filetransferclient
 
 
 
@@ -10,8 +10,12 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("dark-blue")
+
+        self.iconbitmap("images\wingfoot.ico")
         self.geometry("500x400")
-        self.title("multithread uploader and downloader")
+        self.title("Hermes Hub")
 
         container = ctk.CTkFrame(master=self)
         container.pack(fill="both", expand=True)
@@ -53,8 +57,8 @@ class MainFrame(ctk.CTkFrame):
 
         title = ctk.CTkLabel(
             master=frame1,
-            text="MULTITHREAD UPLOADER AND DOWNLOADER",
-            font=('Arial',16),
+            text="HERMES HUB",
+            font=('Times New Roman',32),
         )
         title.pack(
             padx=16, pady=16,
@@ -305,8 +309,7 @@ class CreditsFrame(ctk.CTkFrame):
 
 
 if __name__ == "__main__":
-    ctk.set_appearance_mode("dark")
-    ctk.set_default_color_theme("dark-blue")
+    
     
     app = App()
     app.mainloop()
