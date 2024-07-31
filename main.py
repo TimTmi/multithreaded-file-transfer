@@ -1,8 +1,9 @@
 import customtkinter as ctk
 from tkinter import filedialog
 from PIL import Image
+from blinker import signal
 
-# import filetransferclient
+import filetransferclient
 
 
 
@@ -15,6 +16,7 @@ class App(ctk.CTk):
 
         self.iconbitmap("images\wingfoot.ico")
         self.geometry("500x400")
+        self.resizable(False, False)
         self.title("Hermes Hub")
 
         container = ctk.CTkFrame(master=self)
@@ -50,33 +52,39 @@ class MainFrame(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        frame1 = ctk.CTkFrame(master=self)
+        frame1 = ctk.CTkFrame(
+            master=self,
+            fg_color="transparent"
+        )
         frame1.grid(
             row=0
         )
 
         title = ctk.CTkLabel(
             master=frame1,
-            text="HERMES HUB",
-            font=('Times New Roman',32),
+            text = '',
+            image=ctk.CTkImage(
+                light_image=Image.open("images\wingfootTitle.png"),
+                size=(128,128)
+            ),
         )
         title.pack(
             padx=16, pady=16,
             expand = True
         )
 
-        frame2 = ctk.CTkFrame(master=self)
+        frame2 = ctk.CTkFrame(master=self,width=512,height=128+16)
         frame2.grid(
             row=1,
-            padx=16,
-            sticky="nsew"
+            padx=16
         )
         frame2.grid_columnconfigure(0, weight=1)
+        frame2.grid_propagate(False)
 
         upload_button = ctk.CTkButton(
             master=frame2,
-            text="UPLOAD",
-            font=('Arial',16),
+            text="Upload",
+            font=('Segoe UI',16, 'bold'),
             image=ctk.CTkImage(
                 light_image=Image.open("images\cloud-upload.png"),
                 size=(32,32)
@@ -91,8 +99,8 @@ class MainFrame(ctk.CTkFrame):
 
         download_button = ctk.CTkButton(
             master=frame2,
-            text="DOWNLOAD",
-            font=('Arial',16),
+            text="Download",
+            font=('Segoe UI',16, 'bold'),
             image=ctk.CTkImage(
                 light_image=Image.open("images\cloud-download.png"),
                 size=(32,32)
@@ -105,19 +113,20 @@ class MainFrame(ctk.CTkFrame):
             sticky="nsew"
         )
 
-        frame3 = ctk.CTkFrame(master=self)
+        frame3 = ctk.CTkFrame(master=self,width=512,height=64)
         frame3.grid(
             row=2,
-            padx=16, pady=16,
-            sticky="nsew"
+            padx=16, 
+            pady=16
         )
         frame3.grid_columnconfigure(0, weight=1)
         frame3.grid_columnconfigure(1, weight=1)
+        frame3.grid_propagate(False)
 
         credits_button = ctk.CTkButton(
             master=frame3,
-            text="HELP",
-            font=('Arial',16),
+            text="Help",
+            font=('Segoe UI',16, 'bold'),
             command=lambda: controller.show_frame("HelpFrame")
         )
         credits_button.grid(
@@ -127,8 +136,8 @@ class MainFrame(ctk.CTkFrame):
 
         credits_button = ctk.CTkButton(
             master=frame3,
-            text="CREDITS",
-            font=('Arial',16),
+            text="Credits",
+            font=('Segoe UI',16, 'bold'),
             command=lambda: controller.show_frame("CreditsFrame")
         )
         credits_button.grid(
@@ -184,7 +193,7 @@ class UploadFrame(ctk.CTkFrame):
         self.file_label = ctk.CTkLabel(
             master=frame2,
             text="No file selected",
-            font=('Arial',16),
+            font=('Segoe UI', 16, 'bold'),
             width=20
         )
         self.file_label.pack()
@@ -192,12 +201,12 @@ class UploadFrame(ctk.CTkFrame):
         choose_file_button = ctk.CTkButton(
             master=frame2,
             text="Choose a File",
-            font=('Arial',16),
+            font=('Segoe UI',16, 'bold'),
             command=self.open_file_dialog
         )
         choose_file_button.pack(pady=16)
 
-        upload_button = ctk.CTkButton(master=frame2, text="Upload", font=('Arial',16))
+        upload_button = ctk.CTkButton(master=frame2, text="Upload", font=('Segoe UI',16,'bold'))
         upload_button.pack()
     
     def open_file_dialog(self):
@@ -287,7 +296,7 @@ class CreditsFrame(ctk.CTkFrame):
         title = ctk.CTkLabel(
             master=self,
             text="Credits",
-            font=('Arial',32)
+            font=('Segoe UI',32, 'bold')
         )
         title.pack(pady=16)
 
@@ -299,8 +308,8 @@ class CreditsFrame(ctk.CTkFrame):
 
         credits = ctk.CTkLabel(
             master=frame,
-            text = "quang\nhào\nkhoa",
-            font=('Arial',16)
+            text = "hào quang khoa",
+            font=('Segoe UI',16, 'bold')
         )
         credits.pack(pady=16)
 
