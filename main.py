@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from PIL import Image
 from blinker import signal
+from os import path
 
 import filetransferclient
 
@@ -13,7 +14,7 @@ class App(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
 
-        self.iconbitmap("images\wingfoot.ico")
+        self.iconbitmap(path.join("images", "wingfoot.ico"))
         self.geometry("500x600")
         self.resizable(False, False)
         self.title("Hermes Hub")
@@ -36,6 +37,35 @@ class App(ctk.CTk):
         current_frame: ctk.CTkFrame = None
 
         self.show_frame("MainFrame")
+
+        self.status_label = ctk.CTkLabel(
+            master=self,
+            text="Server Status: ",
+            font=('Segoe UI', 14, 'bold'),
+            padx=3,
+            pady=3
+        )
+        self.status_label.place(relx=1.0, rely=0.0, anchor='ne', x=-50, y=0)
+
+        self.status_offline_label = ctk.CTkLabel(
+           master=self,
+           text="Offline",
+           font=('Segoe UI', 14, 'bold'),
+           text_color='red',
+           padx=3,
+           pady=3
+        )
+        self.status_offline_label.place(relx=1.0, rely=0.0, anchor='ne', x=-1, y=0)
+
+        # self.status_online_label = ctk.CTkLabel(
+        #     master=self,
+        #     text="Online",
+        #     font=('Segoe UI', 14, 'bold'),
+        #     text_color='green',
+        #     padx=4,
+        #     pady=4
+        # )
+        # self.status_online_label.place(relx=1.0, rely=0.0, anchor='ne', x=-1, y=0)
     
     def show_frame(self, name: str):
         frame: ctk.CTkFrame = self.frames[name]
@@ -63,7 +93,7 @@ class MainFrame(ctk.CTkFrame):
             master=frame1,
             text = '',
             image=ctk.CTkImage(
-                light_image=Image.open("images\wingfootTitle.png"),
+                light_image=Image.open(path.join("images", "wingfootTitle.png")),
                 size=(250,250)
             ),
         )
@@ -85,7 +115,7 @@ class MainFrame(ctk.CTkFrame):
             text="UPLOAD",
             font=('Segoe UI',16, 'bold'),
             image=ctk.CTkImage(
-                light_image=Image.open("images\cloud-upload.png"),
+                light_image=Image.open(path.join("images", "cloud-upload.png")),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("UploadFrame")
@@ -101,7 +131,7 @@ class MainFrame(ctk.CTkFrame):
             text="UPLOADED FILES",
             font=('Segoe UI',16, 'bold'),
             image=ctk.CTkImage(
-                light_image=Image.open("images\down.png"),
+                light_image=Image.open(path.join("images", "down.png")),
                 size=(30,30)
             ),
             command=lambda: controller.show_frame("UploadedFilesFrame")
@@ -169,7 +199,7 @@ class UploadFrame(ctk.CTkFrame):
             text="",
             width=1,
             image=ctk.CTkImage(
-                light_image=Image.open("images\\return.png"),
+                light_image=Image.open(path.join("images", "return.png")),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("MainFrame")
@@ -268,7 +298,7 @@ class UploadedFilesFrame(ctk.CTkFrame):
             text="",
             width=1,
             image=ctk.CTkImage(
-                light_image=Image.open("images\\return.png"),
+                light_image=Image.open(path.join("images", "return.png")),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("MainFrame")
@@ -333,7 +363,7 @@ class HelpFrame(ctk.CTkFrame):
             text="",
             width=1,
             image=ctk.CTkImage(
-                light_image=Image.open("images\\return.png"),
+                light_image=Image.open(path.join("images", "return.png")),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("MainFrame")
@@ -354,7 +384,7 @@ class CreditsFrame(ctk.CTkFrame):
             text="",
             width=1,
             image=ctk.CTkImage(
-                light_image=Image.open("images\\return.png"),
+                light_image=Image.open(path.join("images", "return.png")),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("MainFrame")
@@ -385,8 +415,7 @@ def close_app():
     app.destroy()
 
 if __name__ == "__main__":
-    
-    ftc = filetransferclient.FileTransferClient(1306, "client_data")
+    ftc = filetransferclient.FileTransferClient(1306)
     
     app = App()
     app.mainloop()
