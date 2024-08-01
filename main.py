@@ -1,10 +1,9 @@
 import customtkinter as ctk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from PIL import Image
 from blinker import signal
 
 import filetransferclient
-
 
 
 class App(ctk.CTk):
@@ -15,7 +14,7 @@ class App(ctk.CTk):
         ctk.set_default_color_theme("dark-blue")
 
         self.iconbitmap("images\wingfoot.ico")
-        self.geometry("500x400")
+        self.geometry("500x600")
         self.resizable(False, False)
         self.title("Hermes Hub")
 
@@ -65,7 +64,7 @@ class MainFrame(ctk.CTkFrame):
             text = '',
             image=ctk.CTkImage(
                 light_image=Image.open("images\wingfootTitle.png"),
-                size=(128,128)
+                size=(250,250)
             ),
         )
         title.pack(
@@ -83,7 +82,7 @@ class MainFrame(ctk.CTkFrame):
 
         upload_button = ctk.CTkButton(
             master=frame2,
-            text="Upload",
+            text="UPLOAD",
             font=('Segoe UI',16, 'bold'),
             image=ctk.CTkImage(
                 light_image=Image.open("images\cloud-upload.png"),
@@ -99,11 +98,11 @@ class MainFrame(ctk.CTkFrame):
 
         download_button = ctk.CTkButton(
             master=frame2,
-            text="Download",
+            text="UPLOADED FILES",
             font=('Segoe UI',16, 'bold'),
             image=ctk.CTkImage(
-                light_image=Image.open("images\cloud-download.png"),
-                size=(32,32)
+                light_image=Image.open("images\down.png"),
+                size=(30,30)
             ),
             command=lambda: controller.show_frame("UploadedFilesFrame")
         )
@@ -130,6 +129,7 @@ class MainFrame(ctk.CTkFrame):
             command=lambda: controller.show_frame("HelpFrame")
         )
         credits_button.grid(
+            row=0, column=0,
             padx=16,
             pady=16
         )
@@ -142,6 +142,18 @@ class MainFrame(ctk.CTkFrame):
         )
         credits_button.grid(
             row=0, column=1,
+            padx=16,
+            pady=16
+        )
+
+        logout_button = ctk.CTkButton(
+            master=frame3,
+            text="Quit",
+            font=('Segoe UI',16, 'bold'),
+            command=close_app
+        )
+        logout_button.grid(
+            row=0, column=2,
             padx=16,
             pady=16
         )
@@ -206,8 +218,11 @@ class UploadFrame(ctk.CTkFrame):
         )
         choose_file_button.pack(pady=16)
 
-        upload_button = ctk.CTkButton(master=frame2, text="Upload", font=('Segoe UI',16,'bold'))
+        upload_button = ctk.CTkButton(master=frame2, text="Upload", font=('Segoe UI',16,'bold'), command=self.upload_file)
         upload_button.pack()
+    
+    def save_file_path(self, file_path):
+        self.file_path = file_path
     
     def open_file_dialog(self):
         file_path = filedialog.askopenfilename(
@@ -215,12 +230,32 @@ class UploadFrame(ctk.CTkFrame):
             filetypes=(("All files", "*.*"),)
         )
         if file_path:
-            self.file_label.configure(text=f"Selected file: {self.truncate_text(text=file_path, max_length=56)}")
+            self.save_file_path(file_path)
+            file_name = file_path.split("/")[-1]
+            self.file_label.configure(text=f"Selected file: {self.truncate_text(text=file_name, max_length=30)}")
     
     def truncate_text(self, text, max_length):
             if len(text) > max_length:
                 return text[:max_length-3] + "..."
             return text
+    def upload_file(self):
+        file_path1 = self.file_label.cget("text")
+        if file_path1 == "No file selected":
+            messagebox.showwarning("No File", "Please select a file before uploading.")
+        else:
+            file_path2 = self.file_path
+            if self.file_exists(file_path2):
+                messagebox.showwarning("File Exists", "The selected file already exists.")
+            else:
+                try:
+                    ftc.upload_file(file_path2)
+                    messagebox.showinfo("Success", "File uploaded successfully!")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to upload file: {str(e)}")
+    def file_exists(self, file_path):
+        existing_files = ftc.list_files()
+        file_name = file_path.split("/")[-1]
+        return file_name in existing_files   
 
 
 
@@ -248,12 +283,45 @@ class UploadedFilesFrame(ctk.CTkFrame):
             padx=16, pady=16,
             fill="both", expand=True
         )
+        if(len(ftc.list_files())==0):
+            check = "No files uploaded"
+            label = ctk.CTkLabel(master=scrollable_frame, text=check, font=('Segoe UI',20,'bold'))
+            label.pack(
+                fill="both", expand=True
+            )
+        else:
+            label = ctk.CTkLabel(master=scrollable_frame, text=ftc.list_files(), font=('Segoe UI',20,'bold'))
+            label.pack(
+            fill="both", expand=True
+            )
+        bot_frame = ctk.CTkFrame(master=self,width=512,height=64)
+        bot_frame.pack(
+            padx=16,
+            pady=16
+        )
+        bot_frame.grid_columnconfigure(0, weight=1)
+        bot_frame.grid_columnconfigure(1, weight=1)
+        bot_frame.grid_propagate(False)
 
-        label = ctk.CTkLabel(master=scrollable_frame, text="no files")
-        label.pack(
+
+        download_button = ctk.CTkButton(master=bot_frame, text="Download", font=('Segoe UI',20,'bold'))
+        download_button.pack(
             fill="both", expand=True
         )
-
+        download_button.grid(
+            row=0, column=0,
+            padx=16, pady=16,
+            sticky="nsew"
+        )
+        delete_button = ctk.CTkButton(master=bot_frame, text="Delete", font=('Segoe UI',20,'bold'))
+        delete_button.pack(
+            fill="both", expand=True
+        )
+        delete_button.grid(
+            row=0, column=1,
+            padx=16, pady=16,
+            sticky="nsew"
+        )
 
 
 class HelpFrame(ctk.CTkFrame):
@@ -313,12 +381,12 @@ class CreditsFrame(ctk.CTkFrame):
         )
         credits.pack(pady=16)
 
-
-
-
+def close_app():
+    app.destroy()
 
 if __name__ == "__main__":
     
+    ftc = filetransferclient.FileTransferClient(1306, "client_data")
     
     app = App()
     app.mainloop()

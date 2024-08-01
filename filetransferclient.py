@@ -10,17 +10,13 @@ import commands
 
 class FileTransferClient:
     address: tuple[str, int]
-    client_data_path: str
     chunk_uploaded = signal("chunk_uploaded")
     chunk_downloaded = signal("chunk_downloaded")
 
 
 
-    def __init__(self, port: int, client_data_path: str, chunk_uploaded_handler = lambda: None, chunk_downloaded_handler = lambda: None) -> None:
-        self.client_data_path = client_data_path
+    def __init__(self, port: int, chunk_uploaded_handler = lambda sender, **kwargs: None, chunk_downloaded_handler = lambda sender, **kwargs: None) -> None:
         self.address = (socket.gethostbyname(socket.gethostname()), port)
-        if not os.path.exists(client_data_path):
-            os.makedirs(client_data_path)
         self.chunk_uploaded.connect(chunk_uploaded_handler)
         self.chunk_downloaded.connect(chunk_downloaded_handler)
 
@@ -124,7 +120,7 @@ class FileTransferClient:
         except Exception as e:
             print(f"[FILE UPLOAD ERROR]: {e}")
             
-    def download_chunk(self, file_name: str, start_byte: int, end_byte: int, chunk_number: int):
+    def download_chunk(self, file_name: str, destination: str, start_byte: int, end_byte: int, chunk_number: int):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect(self.address)
@@ -134,7 +130,7 @@ class FileTransferClient:
                 self.send_int(sock, start_byte)
                 self.send_int(sock, end_byte)
 
-                path: str = os.path.join(self.client_data_path, file_name)
+                path: str = os.path.join(destination, file_name)
                 with open(path, 'r+b') as file:
                     file.seek(start_byte)
                     data = self.recv_all(sock, end_byte - start_byte + 1)
@@ -146,8 +142,11 @@ class FileTransferClient:
         except Exception as e:
             print(f"[CHUNK DOWNLOAD ERROR] {e}")
 
-    def download_file(self, file_name: str, chunk_count: int = 4):
+    def download_file(self, file_name: str, destination: str, chunk_count: int = 4):
         try:
+            if not os.path.exists(destination):
+                raise FileNotFoundError("Destination folder does not exist")
+            
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect(self.address)
                 self.send_command(sock, commands.REQUEST_DOWNLOAD, len(file_name))
@@ -159,7 +158,7 @@ class FileTransferClient:
                 
                 chunk_size = file_size // chunk_count
 
-                path: str = os.path.join(self.client_data_path, file_name)
+                path: str = os.path.join(destination, file_name)
                 with open(path, 'wb') as file:
                     file.seek(file_size - 1)
                     file.write(b'\0')
@@ -169,7 +168,7 @@ class FileTransferClient:
                     start_byte = i * chunk_size
                     end_byte = (file_size - 1) if (i == chunk_count - 1) else (start_byte + chunk_size - 1)
 
-                    thread = threading.Thread(target=self.download_chunk, args=(file_name, start_byte, end_byte, i))
+                    thread = threading.Thread(target=self.download_chunk, args=(file_name, destination, start_byte, end_byte, i))
                     thread.start()
                     threads.append(thread)
 
@@ -192,3 +191,7 @@ class FileTransferClient:
         
         except Exception as e:
             print(f"[FILE DELETION ERROR] {e}")
+
+if __name__ == "__main__":
+    ftc = FileTransferClient(1306)
+    ftc.download_file(".gitignore", "client_data")
