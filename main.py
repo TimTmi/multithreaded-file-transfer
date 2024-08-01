@@ -42,15 +42,25 @@ class App(ctk.CTk):
         )
         self.status_label.place(relx=1.0, rely=0.0, anchor='ne', x=-50, y=0)
 
-        self.status_value_label = ctk.CTkLabel(
-            master=self,
-            text="Offline",
-            font=('Segoe UI', 14, 'bold'),
-            text_color='red',
-            padx=3,
-            pady=3
+        self.status_offline_label = ctk.CTkLabel(
+           master=self,
+           text="Offline",
+           font=('Segoe UI', 14, 'bold'),
+           text_color='red',
+           padx=3,
+           pady=3
         )
-        self.status_value_label.place(relx=1.0, rely=0.0, anchor='ne', x=-1, y=0)
+        self.status_offline_label.place(relx=1.0, rely=0.0, anchor='ne', x=-1, y=0)
+
+        # self.status_online_label = ctk.CTkLabel(
+        #     master=self,
+        #     text="Online",
+        #     font=('Segoe UI', 14, 'bold'),
+        #     text_color='green',
+        #     padx=4,
+        #     pady=4
+        # )
+        # self.status_online_label.place(relx=1.0, rely=0.0, anchor='ne', x=-1, y=0)
 
         self.show_frame("MainFrame")
     
