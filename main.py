@@ -5,8 +5,6 @@ from blinker import signal
 
 import filetransferclient
 
-
-
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -14,9 +12,9 @@ class App(ctk.CTk):
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("dark-blue")
 
-        self.iconbitmap("images\wingfoot.ico")
+        self.iconbitmap("images/wingfoot.ico")
         self.geometry("500x400")
-        self.resizable(False, False)
+        # self.resizable(False, False)
         self.title("Hermes Hub")
 
         container = ctk.CTkFrame(master=self)
@@ -33,8 +31,26 @@ class App(ctk.CTk):
             self.frames[name] = frame
             frame.grid(row=0, column=0, sticky="nsew")
 
-        
-        current_frame: ctk.CTkFrame = None
+        self.current_frame: ctk.CTkFrame = None
+
+        self.status_label = ctk.CTkLabel(
+            master=self,
+            text="Server Status: ",
+            font=('Segoe UI', 14, 'bold'),
+            padx=3,
+            pady=3
+        )
+        self.status_label.place(relx=1.0, rely=0.0, anchor='ne', x=-50, y=0)
+
+        self.status_value_label = ctk.CTkLabel(
+            master=self,
+            text="Offline",
+            font=('Segoe UI', 14, 'bold'),
+            text_color='red',
+            padx=3,
+            pady=3
+        )
+        self.status_value_label.place(relx=1.0, rely=0.0, anchor='ne', x=-1, y=0)
 
         self.show_frame("MainFrame")
     
@@ -43,7 +59,8 @@ class App(ctk.CTk):
         self.current_frame = frame
         frame.tkraise()
 
-
+    def update_server_status(self, status: str):
+        self.server_status_label.configure(text=f"Server Status: {status}")
 
 class MainFrame(ctk.CTkFrame):
     def __init__(self, parent: ctk.CTkFrame, controller: App):
@@ -64,8 +81,8 @@ class MainFrame(ctk.CTkFrame):
             master=frame1,
             text = '',
             image=ctk.CTkImage(
-                light_image=Image.open("images\wingfootTitle.png"),
-                size=(128,128)
+                light_image=Image.open("images/wingfootTitle.png"),
+                size=(120,120)
             ),
         )
         title.pack(
@@ -84,9 +101,9 @@ class MainFrame(ctk.CTkFrame):
         upload_button = ctk.CTkButton(
             master=frame2,
             text="Upload",
-            font=('Segoe UI',16, 'bold'),
+            font=('Segoe UI',16,'bold'),
             image=ctk.CTkImage(
-                light_image=Image.open("images\cloud-upload.png"),
+                light_image=Image.open("images/cloud-upload.png"),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("UploadFrame")
@@ -102,7 +119,7 @@ class MainFrame(ctk.CTkFrame):
             text="Download",
             font=('Segoe UI',16, 'bold'),
             image=ctk.CTkImage(
-                light_image=Image.open("images\cloud-download.png"),
+                light_image=Image.open("images/cloud-download.png"),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("UploadedFilesFrame")
@@ -146,8 +163,6 @@ class MainFrame(ctk.CTkFrame):
             pady=16
         )
 
-
-
 class UploadFrame(ctk.CTkFrame):
     def __init__(self, parent: ctk.CTkFrame, controller: App):
         super().__init__(master=parent)
@@ -157,7 +172,7 @@ class UploadFrame(ctk.CTkFrame):
             text="",
             width=1,
             image=ctk.CTkImage(
-                light_image=Image.open("images\\return.png"),
+                light_image=Image.open("images/return.png"),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("MainFrame")
@@ -181,14 +196,6 @@ class UploadFrame(ctk.CTkFrame):
             fg_color="transparent"
         )
         frame2.grid(sticky="ew")
-        # frame2.grid_rowconfigure(0, weight=1)
-        # frame2.grid_rowconfigure(1, weight=1)
-        # frame2.grid_columnconfigure(0, weight=1)
-
-        # choose_file_frame = ctk.CTkFrame(master=frame2)
-        # choose_file_frame.grid(sticky="ew")
-        # choose_file_frame.grid_columnconfigure(0, weight=0)
-        # choose_file_frame.grid_columnconfigure(1, weight=1)
 
         self.file_label = ctk.CTkLabel(
             master=frame2,
@@ -222,8 +229,6 @@ class UploadFrame(ctk.CTkFrame):
                 return text[:max_length-3] + "..."
             return text
 
-
-
 class UploadedFilesFrame(ctk.CTkFrame):
     def __init__(self, parent: ctk.CTkFrame, controller: App):
         super().__init__(master=parent)
@@ -233,7 +238,7 @@ class UploadedFilesFrame(ctk.CTkFrame):
             text="",
             width=1,
             image=ctk.CTkImage(
-                light_image=Image.open("images\\return.png"),
+                light_image=Image.open("images/return.png"),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("MainFrame")
@@ -254,8 +259,6 @@ class UploadedFilesFrame(ctk.CTkFrame):
             fill="both", expand=True
         )
 
-
-
 class HelpFrame(ctk.CTkFrame):
     def __init__(self, parent: ctk.CTkFrame, controller: App):
         super().__init__(master=parent)
@@ -265,7 +268,7 @@ class HelpFrame(ctk.CTkFrame):
             text="",
             width=1,
             image=ctk.CTkImage(
-                light_image=Image.open("images\\return.png"),
+                light_image=Image.open("images/return.png"),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("MainFrame")
@@ -274,8 +277,6 @@ class HelpFrame(ctk.CTkFrame):
             padx=16, pady=16,
             anchor="w"
         )
-
-
 
 class CreditsFrame(ctk.CTkFrame):
     def __init__(self, parent: ctk.CTkFrame, controller: App):
@@ -286,7 +287,7 @@ class CreditsFrame(ctk.CTkFrame):
             text="",
             width=1,
             image=ctk.CTkImage(
-                light_image=Image.open("images\\return.png"),
+                light_image=Image.open("images/return.png"),
                 size=(32,32)
             ),
             command=lambda: controller.show_frame("MainFrame")
@@ -313,12 +314,8 @@ class CreditsFrame(ctk.CTkFrame):
         )
         credits.pack(pady=16)
 
-
-
-
-
 if __name__ == "__main__":
-    
-    
+
+
     app = App()
     app.mainloop()
