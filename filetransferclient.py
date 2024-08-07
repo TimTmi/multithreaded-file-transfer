@@ -61,8 +61,13 @@ class FileTransferClient:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect(self.address)
                 self.send_command(sock, commands.LIST)
-                files = self.recv_all(sock, self.recv_int(sock))
-                return files.decode()
+                data = self.recv_all(sock, self.recv_int(sock)).decode()
+                data = data.splitlines()
+                files_data: list[tuple[str, str, str]] = []
+                for i in data:
+                    file_data: tuple[str, str, str] = tuple(i.split('@'))
+                    files_data.append(file_data)
+                return files_data
         
         except Exception as e:
             print(f"[FILE LISTING ERROR] {e}")
@@ -130,8 +135,7 @@ class FileTransferClient:
                 self.send_int(sock, start_byte)
                 self.send_int(sock, end_byte)
 
-                path: str = os.path.join(destination, file_name)
-                with open(path, 'r+b') as file:
+                with open(destination, 'r+b') as file:
                     file.seek(start_byte)
                     data = self.recv_all(sock, end_byte - start_byte + 1)
                     file.write(data)
@@ -144,9 +148,6 @@ class FileTransferClient:
 
     def download_file(self, file_name: str, destination: str, chunk_count: int = 4):
         try:
-            if not os.path.exists(destination):
-                raise FileNotFoundError("Destination folder does not exist")
-            
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect(self.address)
                 self.send_command(sock, commands.REQUEST_DOWNLOAD, len(file_name))
@@ -158,8 +159,7 @@ class FileTransferClient:
                 
                 chunk_size = file_size // chunk_count
 
-                path: str = os.path.join(destination, file_name)
-                with open(path, 'wb') as file:
+                with open(destination, 'wb') as file:
                     file.seek(file_size - 1)
                     file.write(b'\0')
 
@@ -191,7 +191,3 @@ class FileTransferClient:
         
         except Exception as e:
             print(f"[FILE DELETION ERROR] {e}")
-
-if __name__ == "__main__":
-    ftc = FileTransferClient(1306)
-    ftc.download_file(".gitignore", "client_data")
