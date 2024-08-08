@@ -51,7 +51,7 @@ def handle_client(conn: socket.socket, addr: str):
 
             match command:
                 case commands.PING:
-                    print(f"[PING] {addr}")
+                    # print(f"[PING] {addr}")
                     send_bool(conn, True)
 
                 case commands.LIST:

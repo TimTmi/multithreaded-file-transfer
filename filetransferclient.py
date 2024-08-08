@@ -2,7 +2,6 @@ import socket
 import threading
 import struct
 import os
-from blinker import signal
 
 import commands
 
@@ -10,15 +9,11 @@ import commands
 
 class FileTransferClient:
     address: tuple[str, int]
-    chunk_uploaded = signal("chunk_uploaded")
-    chunk_downloaded = signal("chunk_downloaded")
 
 
 
-    def __init__(self, port: int, chunk_uploaded_handler = lambda sender, **kwargs: None, chunk_downloaded_handler = lambda sender, **kwargs: None) -> None:
+    def __init__(self, port: int) -> None:
         self.address = (socket.gethostbyname(socket.gethostname()), port)
-        self.chunk_uploaded.connect(chunk_uploaded_handler)
-        self.chunk_downloaded.connect(chunk_downloaded_handler)
 
 
 
@@ -53,7 +48,7 @@ class FileTransferClient:
                 return self.recv_bool(sock)
             
         except Exception as e:
-            print(f"[PING ERROR] {e}")
+            # print(f"[PING ERROR] {e}")
             return False
 
     def list_files(self):
@@ -87,8 +82,7 @@ class FileTransferClient:
                     file.seek(start_byte)
                     data: bytes = file.read(end_byte - start_byte + 1)
                     sock.sendall(data)
-                
-                self.chunk_uploaded.send(self, chunk = chunk_number)
+
                 print(f"Chunk {chunk_number} uploaded from {start_byte} to {end_byte}")
         
         except Exception as e:
@@ -140,7 +134,6 @@ class FileTransferClient:
                     data = self.recv_all(sock, end_byte - start_byte + 1)
                     file.write(data)
                 
-                self.chunk_downloaded.send(self, chunk = chunk_number)
                 print(f"Chunk {chunk_number} downloaded from {start_byte} to {end_byte}")
         
         except Exception as e:

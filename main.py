@@ -302,22 +302,20 @@ class UploadFrame(ctk.CTkFrame):
 
         upload_button = ctk.CTkButton(master=frame2, text="Upload", font=('Segoe UI',16,'bold'), command=self.upload_and_refresh)
         upload_button.pack()
+
+        self.file_path = ""
     
     def refresh(self):
         self.file_label.configure(text="No file selected")
     
-    def save_file_path(self, file_path):
-        self.file_path = file_path
-    
     def open_file_dialog(self):
-        file_path = filedialog.askopenfilename(
+        self.file_path = filedialog.askopenfilename(
             title="Select a File",
             # initialdir="",
             filetypes=(("All files", "*.*"),)
         )
-        if file_path:
-            self.save_file_path(file_path)
-            file_name = file_path.split("/")[-1]
+        if self.file_path:
+            file_name = self.file_path.split("/")[-1]
             self.file_label.configure(text=f"Selected file: {self.truncate_text(text=file_name, max_length=30)}")
     
     def truncate_text(self, text, max_length):
@@ -326,26 +324,29 @@ class UploadFrame(ctk.CTkFrame):
             return text
     
     def upload_file(self):
-        file_path1 = self.file_label.cget("text")
-        if file_path1 == "No file selected":
+        if not self.file_path:
            app.show_notification("Please select a file before uploading.")
 
         else:
-            file_path2 = self.file_path
-            if self.file_exists(file_path2):
-                app.show_notification("The selected file already exists.")
+            if self.file_exists(self.file_path):
+                app.show_notification("The selected file has already existed on the server.")
 
             else:
                 try:
-                    ftc.upload_file(file_path2)
+                    ftc.upload_file(self.file_path)
                     app.show_notification("File uploaded successfully!")
+                    
                 except Exception as e:
                     app.show_notification(f"Failed to upload file: {e}")
 
     def file_exists(self, file_path):
-        existing_files = ftc.list_files()
-        file_name = file_path.split("/")[-1]
-        return file_name in existing_files   
+        try:
+            existing_files = ftc.list_files()
+            file_name = path.basename(self.file_path)
+            return any(file_name == name for name, _, _ in existing_files)
+        except Exception as e:
+            print(e)
+    
     def refresh_file_label(self):
         self.file_label.configure(text="No file selected")
 
@@ -436,7 +437,7 @@ class UploadedFilesFrame(ctk.CTkFrame):
                 sticky="nsew"
             )
 
-            self.files = None
+            self.files = []
             self.refresh()
 
 
@@ -512,6 +513,7 @@ class UploadedFilesFrame(ctk.CTkFrame):
                 self.file_list.insert('end', f"{name:<64}\n\t{creation_time:<64}\n\t{size:<64}")
         
         except Exception as e:
+            self.files = []
             print(e)
 
     def delete_and_refresh(self):
