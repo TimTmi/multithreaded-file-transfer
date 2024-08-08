@@ -315,7 +315,7 @@ class UploadFrame(ctk.CTkFrame):
             filetypes=(("All files", "*.*"),)
         )
         if self.file_path:
-            file_name = path.base_name(self.file_path)
+            file_name = path.basename(self.file_path)
             self.file_label.configure(text=f"Selected file: {self.truncate_text(text=file_name, max_length=30)}")
     
     def truncate_text(self, text, max_length):
