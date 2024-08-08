@@ -457,9 +457,9 @@ class UploadedFilesFrame(ctk.CTkFrame):
             app.show_notification("No files to download.")
 
         else:
-            selection: int = self.file_list.curselection()
+            selection = self.file_list.curselection()
 
-            if not selection:
+            if selection is None:
                 app.show_notification("Please select a file to download.")
             
             else:
@@ -487,9 +487,9 @@ class UploadedFilesFrame(ctk.CTkFrame):
             app.show_notification("No files to delete.")
 
         else:
-            selection: int = self.file_list.curselection()
+            selection = self.file_list.curselection()
             
-            if not selection:
+            if selection is None:
                 app.show_notification("Please select a file to delete.")
 
             else:
