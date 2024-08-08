@@ -2,9 +2,12 @@ import os
 import socket
 import threading
 import struct
+import time
+from humanize import naturalsize
+
 import commands
 
-HOST = socket.gethostbyname(socket.gethostname())
+HOST = '0.0.0.0'
 PORT = 1306
 ADDRESS = (HOST, PORT)
 SIZE = 1024
@@ -36,7 +39,7 @@ def path_to(file_name: str):
 
 
 def handle_client(conn: socket.socket, addr: str):
-    print(f"[NEW CONNECTION] {addr} connected.")
+    print(f"[NEW CONNECTION] {addr}")
 
     try:
         while True:
@@ -44,15 +47,23 @@ def handle_client(conn: socket.socket, addr: str):
             if not header:
                 break
             command, data_length = struct.unpack('!BI', header)
-            print(f"[COMMAND] {command} with data length {data_length}")
+            # print(f"[COMMAND] {command} with data length {data_length}")
 
             match command:
                 case commands.PING:
+                    print(f"[PING] {addr}")
                     send_bool(conn, True)
 
                 case commands.LIST:
+                    print(f"[LIST] {addr}")
                     files = os.listdir(SERVER_DATA_PATH)
-                    data = '\n'.join(file for file in files).encode()
+                    for i in range(len(files)):
+                        file: str = files[i]
+                        path = path_to(file)
+                        creation_time: str = time.ctime(os.path.getctime(path))
+                        size: str = naturalsize(os.path.getsize(path))
+                        files[i] = f"{file}@{creation_time}@{size}"
+                    data = '\n'.join(file_data for file_data in files).encode()
                     send_int(conn, len(data))
                     conn.sendall(data)
 
@@ -69,6 +80,8 @@ def handle_client(conn: socket.socket, addr: str):
                     with open(path, 'wb') as file:
                         file.seek(file_size - 1)
                         file.write(b'\0')
+
+                    print(f"[REQUEST UPLOAD] {addr} {file_name}")
                     
                 case commands.REQUEST_DOWNLOAD:
                     file_name: str = recv_all(conn, data_length).decode()
@@ -78,6 +91,8 @@ def handle_client(conn: socket.socket, addr: str):
                         conn.sendall(struct.pack('!?I', False, 0))
                     else:
                         conn.sendall(struct.pack('!?I', True, os.path.getsize(path)))
+                    
+                    print(f"[REQUEST DOWNLOAD] {addr} {file_name}")
 
                 case commands.UPLOAD_CHUNK:
                     try:
@@ -90,9 +105,11 @@ def handle_client(conn: socket.socket, addr: str):
                         with open(path, 'r+b') as file:
                             file.seek(start_byte)
                             file.write(data)
+                        
+                        print(f"[UPLOAD CHUNK] {addr} {file_name} {start_byte} {end_byte}")
                     
                     except Exception as e:
-                        print(f"[CHUNK UPLOAD ERROR] {e}")
+                        print(f"[CHUNK UPLOAD ERROR] {addr} {e}")
 
                 case commands.DOWNLOAD_CHUNK:
                     try:
@@ -105,9 +122,11 @@ def handle_client(conn: socket.socket, addr: str):
                             file.seek(start_byte)
                             data: bytes = file.read(end_byte - start_byte + 1)
                             conn.sendall(data)
+                        
+                        print(f"[DOWNLOAD CHUNK] {addr} {file_name} {start_byte} {end_byte}")
 
                     except Exception as e:
-                        print(f"[CHUNK DOWNLOAD ERROR] {e}")
+                        print(f"[CHUNK DOWNLOAD ERROR] {addr} {e}")
 
                 case commands.DELETE:
                     file_name = recv_all(conn, data_length).decode()
@@ -118,14 +137,17 @@ def handle_client(conn: socket.socket, addr: str):
                         send_bool(conn, True)
                     else:
                         send_bool(conn, False)
+                    
+                    print(f"[DELETE] {addr} {file_name}")
+
 
 
     except Exception as e:
-        print(f"[ERROR] {e}")
+        print(f"[ERROR] {addr} {e}")
 
     finally:
         conn.close()
-        print(f"[DISCONNECTED] {addr} disconnected.")
+        print(f"[DISCONNECTED] {addr}")
 
 def start_server():
     print("[STARTING] Server is starting")
