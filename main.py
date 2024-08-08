@@ -436,7 +436,8 @@ class UploadedFilesFrame(ctk.CTkFrame):
                 sticky="nsew"
             )
 
-            # self.refresh()
+            self.files = None
+            self.refresh()
 
 
             if len(self.files) == 0:
