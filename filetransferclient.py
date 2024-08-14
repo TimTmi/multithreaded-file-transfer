@@ -10,12 +10,12 @@ import commands
 class FileTransferClient:
     address: tuple[str, int]
 
+    def __init__(self, port: int, server_ip: str = socket.gethostbyname(socket.gethostname())) -> None:
+        self.address = (server_ip, port)
+        socket.setdefaulttimeout(2)
 
-
-    def __init__(self, port: int) -> None:
-        self.address = (socket.gethostbyname(socket.gethostname()), port)
-
-
+    def get_local_host(self):
+        return socket.gethostbyname(socket.gethostname())
 
     def send_command(self, sock: socket.socket, command: int, data_length: int = 0):
         sock.sendall(struct.pack('!BI', command, data_length))
@@ -67,7 +67,7 @@ class FileTransferClient:
         except Exception as e:
             print(f"[FILE LISTING ERROR] {e}")
 
-    def upload_chunk(self, path: str, start_byte: int, end_byte: int, chunk_number: int):
+    def upload_chunk(self, path: str, start_byte: int, end_byte: int, chunk_number: int, progress_tracker = None):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect(self.address)
@@ -82,7 +82,8 @@ class FileTransferClient:
                     file.seek(start_byte)
                     data: bytes = file.read(end_byte - start_byte + 1)
                     sock.sendall(data)
-
+                    if not progress_tracker is None:
+                        progress_tracker(chunk_number)
                 print(f"Chunk {chunk_number} uploaded from {start_byte} to {end_byte}")
         
         except Exception as e:
@@ -119,7 +120,7 @@ class FileTransferClient:
         except Exception as e:
             print(f"[FILE UPLOAD ERROR]: {e}")
             
-    def download_chunk(self, file_name: str, destination: str, start_byte: int, end_byte: int, chunk_number: int):
+    def download_chunk(self, file_name: str, destination: str, start_byte: int, end_byte: int, chunk_number: int, progress_tracker = None):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect(self.address)
@@ -133,6 +134,8 @@ class FileTransferClient:
                     file.seek(start_byte)
                     data = self.recv_all(sock, end_byte - start_byte + 1)
                     file.write(data)
+                    if not progress_tracker is None:
+                        progress_tracker(chunk_number)
                 
                 print(f"Chunk {chunk_number} downloaded from {start_byte} to {end_byte}")
         

@@ -6,6 +6,7 @@ from os import path
 from CTkListbox import *
 from time import sleep
 import threading
+import ipaddress
 
 import filetransferclient
 
@@ -34,17 +35,19 @@ class App(ctk.CTk):
         self.main_frame = MainFrame(*arguments)
         self.upload_frame = UploadFrame(*arguments)
         self.uploaded_files_frame = UploadedFilesFrame(*arguments)
-        self.help_frame = HelpFrame(*arguments)
+        self.settings_frame = SettingsFrame(*arguments)
         self.credits_frame = CreditsFrame(*arguments)
 
         self.current_frame = self.main_frame
 
-        for i in (self.main_frame, self.upload_frame, self.uploaded_files_frame, self.help_frame, self.credits_frame):
+        for i in (self.main_frame, self.upload_frame, self.uploaded_files_frame, self.settings_frame, self.credits_frame):
             i.grid(row=0, column=0, sticky="nsew")
 
         self.show_frame(self.main_frame)
 
-        self.server_active = False
+        self.server_active: bool = False
+        self.server_ip: str = ftc.get_local_host()
+        self.chunks: int = 4
 
         self.status_label = ctk.CTkLabel(
             master=self,
@@ -115,6 +118,18 @@ class App(ctk.CTk):
         )
 
         return return_button
+
+    def center_widget(self, widget: ctk.CTkBaseClass):
+        widget.update_idletasks()
+        window_width = widget.winfo_width()
+        window_height = widget.winfo_height()
+        screen_width = widget.winfo_screenwidth()
+        screen_height = widget.winfo_screenheight()
+
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+
+        widget.place(x=x, y=y)
     
     def show_notification(self, text: str):
         notification = SlideInNotification(self, text=text)
@@ -219,9 +234,9 @@ class MainFrame(ctk.CTkFrame):
 
         credits_button = ctk.CTkButton(
             master=frame3,
-            text="Help",
+            text="Settings",
             font=('Segoe UI',16, 'bold'),
-            command=lambda: app.show_frame(app.help_frame)
+            command=lambda: app.show_frame(app.settings_frame)
         )
         credits_button.grid(
             row=0, column=0,
@@ -307,6 +322,7 @@ class UploadFrame(ctk.CTkFrame):
     
     def refresh(self):
         self.file_label.configure(text="No file selected")
+        self.file_path = ""
     
     def open_file_dialog(self):
         self.file_path = filedialog.askopenfilename(
@@ -333,8 +349,9 @@ class UploadFrame(ctk.CTkFrame):
 
             else:
                 try:
-                    ftc.upload_file(self.file_path)
+                    ftc.upload_file(self.file_path, app.chunks)
                     app.show_notification("File uploaded successfully!")
+                    self.file_path = ""
                     
                 except Exception as e:
                     app.show_notification(f"Failed to upload file: {e}")
@@ -342,6 +359,8 @@ class UploadFrame(ctk.CTkFrame):
     def file_exists(self, file_path):
         try:
             existing_files = ftc.list_files()
+            if existing_files is None:
+                return False
             file_name = path.basename(self.file_path)
             return any(file_name == name for name, _, _ in existing_files)
         except Exception as e:
@@ -389,19 +408,6 @@ class UploadedFilesFrame(ctk.CTkFrame):
                     fill="both", expand=True
             )
             
-            refresh_button = ctk.CTkButton(
-                master=self,
-                text="Refresh",
-                font=('Segoe UI', 16, 'bold'),
-                command=self.refresh
-            )
-
-            refresh_button.pack(
-                fill = "both", expand = True,
-            )
-
-            refresh_button.place(x=350, y=35)
-
             bot_frame = ctk.CTkFrame(master=self,width=512,height=64)
             bot_frame.pack(
                 padx=16,
@@ -431,6 +437,7 @@ class UploadedFilesFrame(ctk.CTkFrame):
                 font=('Segoe UI',16,'bold'),
                 command=self.delete_and_refresh
             )
+
             delete_button.grid(
                 row=0, column=1,
                 padx=16, pady=16,
@@ -439,7 +446,6 @@ class UploadedFilesFrame(ctk.CTkFrame):
 
             self.files = []
             self.refresh()
-
 
             if len(self.files) == 0:
                 self.file_list.pack_forget()
@@ -475,7 +481,7 @@ class UploadedFilesFrame(ctk.CTkFrame):
 
                 if destination:
                     try:
-                        ftc.download_file(selected_file, destination)
+                        ftc.download_file(selected_file, destination, app.chunks)
                         app.show_notification("File downloaded successfully!")
                     except Exception as e:
                         app.show_notification(f"Failed to download file: {str(e)}")
@@ -509,6 +515,9 @@ class UploadedFilesFrame(ctk.CTkFrame):
             self.file_list.pack(fill="both", expand=True)
             self.file_list.delete(0, "end")
 
+            if self.files is None:
+                self.files = []
+
             for name, creation_time, size in self.files:
                 self.file_list.insert('end', f"{name:<64}\n\t{creation_time:<64}\n\t{size:<64}")
         
@@ -521,7 +530,7 @@ class UploadedFilesFrame(ctk.CTkFrame):
         self.refresh()
 
 
-class HelpFrame(ctk.CTkFrame):
+class SettingsFrame(ctk.CTkFrame):
     def __init__(self, parent: ctk.CTkFrame, app: App):
         super().__init__(master=parent)
 
@@ -531,6 +540,90 @@ class HelpFrame(ctk.CTkFrame):
             padx=16, pady=16,
             anchor="w"
         )
+
+        frame = ctk.CTkFrame(master=self)
+        frame.pack(
+            padx=16, pady=16,
+            fill="both",
+            expand=True
+        )
+
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_rowconfigure(1, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+
+        frame1 = ctk.CTkFrame(master=frame)
+        frame1.grid(row=0, column=0, sticky="sw", padx=16, pady=16)
+
+        server_ip_label = ctk.CTkLabel(
+            master=frame1,
+            text="Server IP",
+            font=('Segoe UI',16, 'bold')
+        )
+
+        server_ip_label.pack(side="left", padx=16, pady=16)
+
+        self.server_ip_entry = ctk.CTkEntry(
+            master=frame1,
+            placeholder_text="0.0.0.0",
+            font=('Segoe UI',16, 'bold')
+        )
+
+        self.server_ip_entry.pack(side="left", padx=16, pady=16)
+        self.server_ip_entry.bind("<Return>", lambda event, app=app, entry=self.server_ip_entry: _on_server_ip_submitted(app=app, server_ip=entry.get()))
+
+        def _on_server_ip_submitted(app: App, server_ip: str):
+            app.focus_set()
+
+            try:
+                ipaddress.ip_address(server_ip)
+                app.server_ip = server_ip
+                # ftc = filetransferclient.FileTransferClient(server_ip=server_ip, port=1306)
+                ftc.address = (server_ip, 1306)
+            
+            except ValueError:
+                print(f"\"{server_ip}\" is not a valid IP address")
+
+        frame2 = ctk.CTkFrame(master=frame)
+        frame2.grid(row=1, column=0, sticky="nw", padx=16, pady=16)
+
+        chunks_label = ctk.CTkLabel(
+            master=frame2,
+            text="Chunk(s) per transfer",
+            font=('Segoe UI',16, 'bold')
+        )
+
+        chunks_label.pack(side="left", padx=16, pady=16)
+
+        self.spinbox = CustomSpinbox(frame2, min_value=1, max_value=10)
+        self.spinbox.pack(side="right")
+        self.spinbox.add_command(lambda event=None, app=app, spinbox=self.spinbox, min=self.spinbox.min_value, max=self.spinbox.max_value: _on_chunks_submitted(app, spinbox, min, max))
+
+        def _on_chunks_submitted(app: App, spinbox: CustomSpinbox, min: int, max: int):
+            app.focus_set()
+            input = spinbox.entry.get()
+
+            try:
+                chunks = int(input)
+                if chunks < min:
+                    chunks = min
+                elif chunks > max:
+                    chunks = max
+                
+                spinbox.entry.delete(0, ctk.END)
+                spinbox.entry.insert(0, str(chunks))
+                app.chunks = chunks
+            
+            except ValueError:
+                print(f"\"{input}\" is not a valid int")
+                spinbox.entry.delete(0, ctk.END)
+                spinbox.entry.insert(0, str(app.chunks))
+    
+    def refresh(self):
+        self.server_ip_entry.delete(0, ctk.END)
+        self.server_ip_entry.insert(0, str(app.server_ip))
+        self.spinbox.entry.delete(0, ctk.END)
+        self.spinbox.entry.insert(0, str(app.chunks))
 
 
 
@@ -555,12 +648,68 @@ class CreditsFrame(ctk.CTkFrame):
             fill="both", expand=True
         )
 
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+
         credits = ctk.CTkLabel(
             master=frame,
             text = "Nguyễn Kiến Hào\nNguyễn Lê Quang\nTrần Anh Khoa\n\n@ Copyright 2024",
             font=('Segoe UI',16, 'bold')
         )
-        credits.pack(pady=16)
+        credits.grid(row=0, column=0)
+
+
+
+class CustomSpinbox(ctk.CTkFrame):
+    def __init__(self, master=None, min_value=0, max_value=100, step_size=1, command=None, **kwargs):
+        super().__init__(master, **kwargs)
+        self.min_value = min_value
+        self.max_value = max_value
+        self.step_size = step_size
+
+        self.value_change_handler: any
+
+        self.entry = ctk.CTkEntry(self, width=60, justify="center", font=('Segoe UI', 16, 'bold'))
+        self.entry.insert(0, str(self.min_value))
+        self.entry.grid(row=0, column=0, padx=(5, 0), pady=(0, 0), sticky="nsew")
+
+        button_frame = ctk.CTkFrame(self)
+        button_frame.grid(row=0, column=1, padx=(5, 5), pady=(5, 5), sticky="nsew")
+
+        button_frame.grid_rowconfigure(0, weight=1)
+        button_frame.grid_rowconfigure(2, weight=1)
+
+        self.increment_button = ctk.CTkButton(button_frame, text="+", width=30, font=('Segoe UI', 16, 'bold'), command=self.increment)
+        self.increment_button.grid(row=0, column=0, pady=(0, 2), sticky="nsew")
+
+        self.decrement_button = ctk.CTkButton(button_frame, text="-", width=30, font=('Segoe UI', 16, 'bold'), command=self.decrement)
+        self.decrement_button.grid(row=2, column=0, pady=(2, 0), sticky="nsew")
+
+    def add_command(self, command):
+        if not command is None:
+            self.entry.bind("<Return>", command)
+            self.value_change_handler = command
+    
+    def increment(self):
+        value = int(self.entry.get())
+        if value < self.max_value:
+            value += self.step_size
+            self.entry.delete(0, ctk.END)
+            self.entry.insert(0, str(value))
+        
+        self._value_changed()
+
+    def decrement(self):
+        value = int(self.entry.get())
+        if value > self.min_value:
+            value -= self.step_size
+            self.entry.delete(0, ctk.END)
+            self.entry.insert(0, str(value))
+        
+        self._value_changed()
+    
+    def _value_changed(self):
+        self.value_change_handler()
 
 
 
@@ -574,8 +723,8 @@ class SlideInNotification(ctk.CTkFrame):
         self.label = ctk.CTkLabel(self, text=self.text, font=('Segoe UI', 16, 'bold'))
         self.label.pack(pady=16, padx=16)
         
-        self.window_width = 500
-        self.window_height = 600
+        self.window_width = app.winfo_width()
+        self.window_height = app.winfo_height()
         self.width = 500 - 32
         self.height = 64
         
@@ -603,6 +752,8 @@ class SlideInNotification(ctk.CTkFrame):
             self.destroy()
 
 
+
+ftc: filetransferclient.FileTransferClient
 
 if __name__ == "__main__":
     ftc = filetransferclient.FileTransferClient(1306)
