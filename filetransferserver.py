@@ -8,7 +8,7 @@ from humanize import naturalsize
 import commands
 
 HOST = '0.0.0.0'
-PORT = 1306
+PORT = 61306
 ADDRESS = (HOST, PORT)
 SIZE = 1024
 SERVER_DATA_PATH = "server_data"
