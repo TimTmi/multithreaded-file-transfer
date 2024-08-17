@@ -653,7 +653,7 @@ class CreditsFrame(ctk.CTkFrame):
 
         credits = ctk.CTkLabel(
             master=frame,
-            text = "Nguyễn Kiến Hào\nNguyễn Lê Quang\nTrần Anh Khoa\n\n@ Copyright 2024",
+            text = "Nguyễn Kiến Hào\nNguyễn Lê Quang\nTrần Anh Khoa\n\nCopyright © 2024",
             font=('Segoe UI',16, 'bold')
         )
         credits.grid(row=0, column=0)
