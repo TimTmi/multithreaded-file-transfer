@@ -7,6 +7,8 @@ from CTkListbox import *
 from time import sleep
 import threading
 import ipaddress
+import time
+import os
 from humanize import naturalsize
 
 import filetransferclient
@@ -373,7 +375,9 @@ class UploadFrame(ctk.CTkFrame):
         self.file_label.configure(text="No file selected")
 
     def upload_and_refresh(self):
-        threading.Thread(target=self.upload_file).start()
+        upload_thread = threading.Thread(target=self.upload_file)
+        upload_thread.daemon = True
+        upload_thread.start()
         # self.upload_file()
         self.refresh_file_label()
 
@@ -422,11 +426,16 @@ class UploadedFilesFrame(ctk.CTkFrame):
             bot_frame.grid_columnconfigure(1, weight=1)
             bot_frame.grid_propagate(False)
 
+            def start_download_thread():
+                download_thread = threading.Thread(target=self.download_file)
+                download_thread.daemon = True
+                download_thread.start()
+
             download_button = ctk.CTkButton(
                 master=bot_frame,
                 text="Download",
                 font=('Segoe UI',16,'bold'),
-                command=lambda: threading.Thread(target=self.download_file).start()
+                command=start_download_thread
                 # command=self.download_file
             )
 
@@ -762,60 +771,75 @@ class SlideInNotification(ctk.CTkFrame):
 
 
 class ProgressWindow(ctk.CTkToplevel):
-    def __init__(self, master, title: str, main_label_text:str, bar_count: int, goal: int, **kwargs):
-        super().__init__(master, **kwargs)
+    def __init__(self, master, title: str, main_label_text: str, bar_count: int, goal: int, **kwargs):
+        try:
+            super().__init__(master, **kwargs)
 
-        self.geometry("500x200")
-        self.resizable(False, False)
-        self.title(title)
-        self.after(130, self.lift)
-        self.after(130, lambda: self.iconbitmap(path.join("images", "wingfoot.ico")))
+            self.geometry("500x200")
+            self.resizable(False, False)
+            self.title(title)
+            self.after(130, self.lift)
+            # icon_path = os.path.join("images", "wingfoot.ico")
+            # if os.path.exists(icon_path):
+            #     self.iconbitmap(icon_path)
+            # else:
+            #     print(f"Icon file not found: {icon_path}")
 
-        self.goal = goal
-        self.humanized_goal = naturalsize(goal)
+            self.goal = goal
+            self.humanized_goal = naturalsize(goal)
 
-        main_label = ctk.CTkLabel(
-            master=self,
-            text=main_label_text,
-            font=('Segoe UI', 16, 'bold')
-        )
-        main_label.pack(pady=16)
+            main_label = ctk.CTkLabel(
+                master=self,
+                text=main_label_text,
+                font=('Segoe UI', 16, 'bold')
+            )
+            main_label.pack(pady=16)
 
-        self.progress_in_size = ctk.CTkLabel(
-            master=self,
-            text="0/0",
-            font=('Segoe UI', 16, 'bold')
-        )
-        self.progress_in_size.pack(padx=16, anchor='w')
+            self.progress_in_size = ctk.CTkLabel(
+                master=self,
+                text="0/0",
+                font=('Segoe UI', 16, 'bold')
+            )
+            self.progress_in_size.pack(padx=16, anchor='w')
 
-        self.progress_in_percentage = ctk.CTkLabel(
-            master=self,
-            text="0%",
-            font=('Segoe UI', 16, 'bold')
-        )
-        self.progress_in_percentage.pack(padx=16, pady=(0,16), anchor='w')
+            self.progress_in_percentage = ctk.CTkLabel(
+                master=self,
+                text="0%",
+                font=('Segoe UI', 16, 'bold')
+            )
+            self.progress_in_percentage.pack(padx=16, pady=(0, 16), anchor='w')
 
-        progress_bars = ctk.CTkFrame(master=self)
-        progress_bars.pack(padx=16, pady=16)
+            progress_bars = ctk.CTkFrame(master=self)
+            progress_bars.pack(padx=16, pady=16)
 
-        self.progress_bar_list: list[ctk.CTkProgressBar] = []
-        self.current_progress: int = 0
+            self.progress_bar_list: list[ctk.CTkProgressBar] = []
+            self.current_progress: int = 0
 
-        for i in range(bar_count):
-            progress_bars.columnconfigure(i, weight=1)
+            for i in range(bar_count):
+                progress_bars.columnconfigure(i, weight=1)
 
-            progress_bar = ctk.CTkProgressBar(master=progress_bars)
-            self.progress_bar_list.append(progress_bar)
-            progress_bar.set(0)
+                progress_bar = ctk.CTkProgressBar(master=progress_bars)
+                self.progress_bar_list.append(progress_bar)
+                progress_bar.set(0)
 
-            progress_bar.grid(row=0, column=i)
-    
+                progress_bar.grid(row=0, column=i)
+        except Exception as e:
+            print(e)
+
     def track_progress(self, chunk_number, transferred, percentage):
         self.progress_bar_list[chunk_number].set(percentage)
         self.current_progress += transferred
-        print(f"{self.current_progress / self.goal * 100:.2f}%")
+        print(transferred)
+        # print(f"{self.current_progress / self.goal * 100:.2f}%")
         self.progress_in_size.configure(text=f"{naturalsize(self.current_progress)} / {self.humanized_goal}")
         self.progress_in_percentage.configure(text=f"{self.current_progress / self.goal * 100:.2f}%")
+
+        if self.current_progress == self.goal:
+            # print(f"{self.current_progress} {self.goal}")
+            self.after(2000, self.destroy)
+
+    # def close_window(self):
+    #     self.destroy()
 
 
 
