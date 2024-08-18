@@ -80,16 +80,24 @@ class FileTransferClient:
 
                 with open(path, 'rb') as file:
                     file.seek(start_byte)
-                    data: bytes = file.read(end_byte - start_byte + 1)
-                    sock.sendall(data)
-                    if not progress_tracker is None:
-                        progress_tracker(chunk_number)
+                    data_length: int = end_byte - start_byte + 1
+                    data: bytes = file.read(data_length)
+
+                    total_sent: int = 0
+                    while total_sent < data_length:
+                        sent = sock.send(data[total_sent:])
+                        if sent == 0:
+                            break
+                        total_sent += sent
+                        if not progress_tracker is None:
+                            progress_tracker(chunk_number, sent, total_sent / data_length)
+
                 print(f"Chunk {chunk_number} uploaded from {start_byte} to {end_byte}")
         
         except Exception as e:
             print(f"[CHUNK UPLOAD ERROR] {e}")
 
-    def upload_file(self, path: str, chunk_count: int = 4):
+    def upload_file(self, path: str, chunk_count: int = 4, progress_tracker = None):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect(self.address)
@@ -110,7 +118,7 @@ class FileTransferClient:
                     start_byte = i * chunk_size
                     end_byte = (file_size - 1) if (i == chunk_count - 1) else (start_byte + chunk_size - 1)
 
-                    thread = threading.Thread(target=self.upload_chunk, args=(path, start_byte, end_byte, i))
+                    thread = threading.Thread(target=self.upload_chunk, args=(path, start_byte, end_byte, i, progress_tracker))
                     thread.start()
                     threads.append(thread)
 
@@ -132,17 +140,31 @@ class FileTransferClient:
 
                 with open(destination, 'r+b') as file:
                     file.seek(start_byte)
-                    data = self.recv_all(sock, end_byte - start_byte + 1)
+                    data_length = end_byte - start_byte + 1
+                    # data = self.recv_all(sock, end_byte - start_byte + 1)
+
+                    data = bytearray()
+                    total_received: int = 0
+                    while total_received < data_length:
+                        packet = sock.recv(data_length - total_received)
+                        if not packet:
+                            raise ConnectionError("Socket connection closed before receiving all data")
+                        data.extend(packet)
+                        total_received += len(packet)
+
+                        if not progress_tracker is None:
+                            progress_tracker(chunk_number, len(packet), total_received / data_length)
+
                     file.write(data)
-                    if not progress_tracker is None:
-                        progress_tracker(chunk_number)
+                    # if not progress_tracker is None:
+                    #     progress_tracker(chunk_number)
                 
                 print(f"Chunk {chunk_number} downloaded from {start_byte} to {end_byte}")
         
         except Exception as e:
             print(f"[CHUNK DOWNLOAD ERROR] {e}")
 
-    def download_file(self, file_name: str, destination: str, chunk_count: int = 4):
+    def download_file(self, file_name: str, destination: str, chunk_count: int = 4, progress_tracker = None):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.connect(self.address)
@@ -164,7 +186,7 @@ class FileTransferClient:
                     start_byte = i * chunk_size
                     end_byte = (file_size - 1) if (i == chunk_count - 1) else (start_byte + chunk_size - 1)
 
-                    thread = threading.Thread(target=self.download_chunk, args=(file_name, destination, start_byte, end_byte, i))
+                    thread = threading.Thread(target=self.download_chunk, args=(file_name, destination, start_byte, end_byte, i, progress_tracker))
                     thread.start()
                     threads.append(thread)
 

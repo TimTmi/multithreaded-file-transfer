@@ -61,7 +61,7 @@ def handle_client(conn: socket.socket, addr: str):
                         file: str = files[i]
                         path = path_to(file)
                         creation_time: str = time.ctime(os.path.getctime(path))
-                        size: str = naturalsize(os.path.getsize(path))
+                        size: str = str(os.path.getsize(path))
                         files[i] = f"{file}@{creation_time}@{size}"
                     data = '\n'.join(file_data for file_data in files).encode()
                     send_int(conn, len(data))

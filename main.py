@@ -7,6 +7,7 @@ from CTkListbox import *
 from time import sleep
 import threading
 import ipaddress
+from humanize import naturalsize
 
 import filetransferclient
 
@@ -20,7 +21,7 @@ class App(ctk.CTk):
 
         self.protocol('WM_DELETE_WINDOW', self.close)
 
-        self.iconbitmap(path.join("images", "wingfoot.ico"))
+        self.iconbitmap(default=path.join("images", "wingfoot.ico"))
         self.geometry("500x600")
         self.resizable(False, False)
         self.title("Hermes Hub")
@@ -119,21 +120,26 @@ class App(ctk.CTk):
 
         return return_button
 
-    def center_widget(self, widget: ctk.CTkBaseClass):
-        widget.update_idletasks()
-        window_width = widget.winfo_width()
-        window_height = widget.winfo_height()
-        screen_width = widget.winfo_screenwidth()
-        screen_height = widget.winfo_screenheight()
+    # def center_widget(self, widget: ctk.CTkBaseClass):
+    #     widget.update_idletasks()
+    #     window_width = widget.winfo_width()
+    #     window_height = widget.winfo_height()
+    #     screen_width = widget.winfo_screenwidth()
+    #     screen_height = widget.winfo_screenheight()
 
-        x = (screen_width - window_width) // 2
-        y = (screen_height - window_height) // 2
+    #     x = (screen_width - window_width) // 2
+    #     y = (screen_height - window_height) // 2
 
-        widget.place(x=x, y=y)
+    #     widget.place(x=x, y=y)
     
     def show_notification(self, text: str):
         notification = SlideInNotification(self, text=text)
         self.after(5000, notification.destroy)
+
+    def truncate_text(self, text, max_length):
+            if len(text) > max_length:
+                return text[:max_length-3] + "..."
+            return text
 
     def close(self):
         self.pinging = False
@@ -332,31 +338,28 @@ class UploadFrame(ctk.CTkFrame):
         )
         if self.file_path:
             file_name = path.basename(self.file_path)
-            self.file_label.configure(text=f"Selected file: {self.truncate_text(text=file_name, max_length=30)}")
-    
-    def truncate_text(self, text, max_length):
-            if len(text) > max_length:
-                return text[:max_length-3] + "..."
-            return text
+            self.file_label.configure(text=f"Selected file: {app.truncate_text(text=file_name, max_length=30)}")
     
     def upload_file(self):
         if not self.file_path:
            app.show_notification("Please select a file before uploading.")
 
         else:
-            if self.file_exists(self.file_path):
+            if self.file_exists():
                 app.show_notification("The selected file has already existed on the server.")
 
             else:
                 try:
-                    ftc.upload_file(self.file_path, app.chunks)
-                    app.show_notification("File uploaded successfully!")
+                    progress_window = ProgressWindow(master=self, title="Uploading...", main_label_text=app.truncate_text(text=self.file_path, max_length=30), bar_count=app.chunks, goal=path.getsize(self.file_path))
+                    ftc.upload_file(self.file_path, app.chunks, progress_window.track_progress)
+                    # ftc.upload_file(self.file_path, app.chunks)
+                    # app.show_notification("File uploaded successfully!")
                     self.file_path = ""
                     
                 except Exception as e:
                     app.show_notification(f"Failed to upload file: {e}")
 
-    def file_exists(self, file_path):
+    def file_exists(self):
         try:
             existing_files = ftc.list_files()
             if existing_files is None:
@@ -370,7 +373,8 @@ class UploadFrame(ctk.CTkFrame):
         self.file_label.configure(text="No file selected")
 
     def upload_and_refresh(self):
-        self.upload_file()
+        threading.Thread(target=self.upload_file).start()
+        # self.upload_file()
         self.refresh_file_label()
 
 
@@ -419,10 +423,11 @@ class UploadedFilesFrame(ctk.CTkFrame):
             bot_frame.grid_propagate(False)
 
             download_button = ctk.CTkButton(
-                master=bot_frame, 
-                text="Download", 
-                font=('Segoe UI',16,'bold'), 
-                command=self.download_file
+                master=bot_frame,
+                text="Download",
+                font=('Segoe UI',16,'bold'),
+                command=lambda: threading.Thread(target=self.download_file).start()
+                # command=self.download_file
             )
 
             download_button.grid(
@@ -481,7 +486,8 @@ class UploadedFilesFrame(ctk.CTkFrame):
 
                 if destination:
                     try:
-                        ftc.download_file(selected_file, destination, app.chunks)
+                        progress_window = ProgressWindow(master=self, title="Downloading...", main_label_text=app.truncate_text(text=selected_file, max_length=30), bar_count=app.chunks, goal=int(self.files[selection][2]))
+                        ftc.download_file(selected_file, destination, app.chunks, progress_window.track_progress)
                         app.show_notification("File downloaded successfully!")
                     except Exception as e:
                         app.show_notification(f"Failed to download file: {str(e)}")
@@ -519,6 +525,7 @@ class UploadedFilesFrame(ctk.CTkFrame):
                 self.files = []
 
             for name, creation_time, size in self.files:
+                size = naturalsize(size)
                 self.file_list.insert('end', f"{name:<64}\n\t{creation_time:<64}\n\t{size:<64}")
         
         except Exception as e:
@@ -578,8 +585,8 @@ class SettingsFrame(ctk.CTkFrame):
             try:
                 ipaddress.ip_address(server_ip)
                 app.server_ip = server_ip
-                # ftc = filetransferclient.FileTransferClient(server_ip=server_ip, port=1306)
-                ftc.address = (server_ip, 1306)
+                # ftc = filetransferclient.FileTransferClient(server_ip=server_ip, port=61306)
+                ftc.address = (server_ip, 61306)
             
             except ValueError:
                 print(f"\"{server_ip}\" is not a valid IP address")
@@ -716,21 +723,22 @@ class CustomSpinbox(ctk.CTkFrame):
 class SlideInNotification(ctk.CTkFrame):
     def __init__(self, master, text, **kwargs):
         super().__init__(master, **kwargs)
-
         self.configure(bg_color='transparent', fg_color='#0F2A46')
-
         self.text = text
         self.label = ctk.CTkLabel(self, text=self.text, font=('Segoe UI', 16, 'bold'))
         self.label.pack(pady=16, padx=16)
         
+        self.update_idletasks()
+        self.width = self.label.winfo_reqwidth() + 32
+        self.height = self.label.winfo_reqheight() + 32
+
         self.window_width = app.winfo_width()
         self.window_height = app.winfo_height()
-        self.width = 500 - 32
-        self.height = 64
-        
-        self.position_x = 16
+
+        self.position_x = self.window_width - self.width - 16
         self.position_y = self.window_height
         
+        self.configure(width=self.width, height=self.height)
         self.place(x=self.position_x, y=self.position_y)
         
         self.slide_in()
@@ -753,9 +761,67 @@ class SlideInNotification(ctk.CTkFrame):
 
 
 
+class ProgressWindow(ctk.CTkToplevel):
+    def __init__(self, master, title: str, main_label_text:str, bar_count: int, goal: int, **kwargs):
+        super().__init__(master, **kwargs)
+
+        self.geometry("500x200")
+        self.resizable(False, False)
+        self.title(title)
+        self.after(130, self.lift)
+        self.after(130, lambda: self.iconbitmap(path.join("images", "wingfoot.ico")))
+
+        self.goal = goal
+        self.humanized_goal = naturalsize(goal)
+
+        main_label = ctk.CTkLabel(
+            master=self,
+            text=main_label_text,
+            font=('Segoe UI', 16, 'bold')
+        )
+        main_label.pack(pady=16)
+
+        self.progress_in_size = ctk.CTkLabel(
+            master=self,
+            text="0/0",
+            font=('Segoe UI', 16, 'bold')
+        )
+        self.progress_in_size.pack(padx=16, anchor='w')
+
+        self.progress_in_percentage = ctk.CTkLabel(
+            master=self,
+            text="0%",
+            font=('Segoe UI', 16, 'bold')
+        )
+        self.progress_in_percentage.pack(padx=16, pady=(0,16), anchor='w')
+
+        progress_bars = ctk.CTkFrame(master=self)
+        progress_bars.pack(padx=16, pady=16)
+
+        self.progress_bar_list: list[ctk.CTkProgressBar] = []
+        self.current_progress: int = 0
+
+        for i in range(bar_count):
+            progress_bars.columnconfigure(i, weight=1)
+
+            progress_bar = ctk.CTkProgressBar(master=progress_bars)
+            self.progress_bar_list.append(progress_bar)
+            progress_bar.set(0)
+
+            progress_bar.grid(row=0, column=i)
+    
+    def track_progress(self, chunk_number, transferred, percentage):
+        self.progress_bar_list[chunk_number].set(percentage)
+        self.current_progress += transferred
+        print(f"{self.current_progress / self.goal * 100:.2f}%")
+        self.progress_in_size.configure(text=f"{naturalsize(self.current_progress)} / {self.humanized_goal}")
+        self.progress_in_percentage.configure(text=f"{self.current_progress / self.goal * 100:.2f}%")
+
+
+
 ftc: filetransferclient.FileTransferClient
 
 if __name__ == "__main__":
-    ftc = filetransferclient.FileTransferClient(1306)
+    ftc = filetransferclient.FileTransferClient(61306)
     app = App()
     app.mainloop()
