@@ -823,14 +823,13 @@ class ProgressWindow(ctk.CTkToplevel):
                 progress_bar.set(0)
 
                 progress_bar.grid(row=0, column=i)
+
         except Exception as e:
             print(e)
 
     def track_progress(self, chunk_number, transferred, percentage):
         self.progress_bar_list[chunk_number].set(percentage)
         self.current_progress += transferred
-        print(transferred)
-        # print(f"{self.current_progress / self.goal * 100:.2f}%")
         self.progress_in_size.configure(text=f"{naturalsize(self.current_progress)} / {self.humanized_goal}")
         self.progress_in_percentage.configure(text=f"{self.current_progress / self.goal * 100:.2f}%")
 

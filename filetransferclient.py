@@ -12,7 +12,7 @@ class FileTransferClient:
 
     def __init__(self, port: int, server_ip: str = socket.gethostbyname(socket.gethostname())) -> None:
         self.address = (server_ip, port)
-        socket.setdefaulttimeout(2)
+        socket.setdefaulttimeout(13)
 
     def get_local_host(self):
         return socket.gethostbyname(socket.gethostname())

@@ -155,6 +155,7 @@ def start_server():
     server.bind(ADDRESS)
     server.listen()
     print(f"[LISTENING] Server is listening on {HOST}:{PORT}.")
+    print(f"Clients can connect to this server locally at {socket.gethostbyname(socket.gethostname())}")
 
     while True:
         conn, addr = server.accept()
